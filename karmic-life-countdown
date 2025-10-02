@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karmic Life Countdown</title>
+<style>
+body{font-family:Arial,sans-serif;text-align:center;padding:20px;background:#f8f8f8;}
+.card{border:1px solid #ccc;padding:20px;border-radius:12px;max-width:420px;margin:auto;box-shadow:0 2px 8px rgba(0,0,0,0.2);background:#fff;}
+input,button{padding:10px;margin:8px;width:90%;border-radius:8px;border:1px solid #aaa;}
+button{cursor:pointer;font-weight:bold;}
+#countdown{font-size:20px;margin-top:15px;font-weight:bold;color:#333;}
+.share-btns{margin-top:15px;}
+.share-btns button{width:auto;margin:5px;background:#25D366;color:white;border:none;}
+.screenshot-btn{background:#007bff !important;}
+</style>
+</head>
+<body>
+<h1>🕉️ Karmic Life Countdown</h1>
+<div class="card" id="capture-card">
+<div id="auth-section">
+<input type="email" id="email" placeholder="Email"><br>
+<input type="password" id="password" placeholder="Password"><br>
+<button onclick="signup()">Sign Up</button>
+<button onclick="login()">Login</button>
+</div>
+
+<div id="dob-section" style="display:none;">
+<p>Enter your Date of Birth:</p>
+<input type="date" id="dob"><br>
+<button onclick="saveDOB()">Save DOB</button>
+</div>
+
+<div id="countdown-section" style="display:none;">
+<h2>Your Life Countdown</h2>
+<div id="countdown"></div>
+<div class="share-btns">
+<button onclick="shareWhatsApp()">📲 Share on WhatsApp</button>
+<button class="screenshot-btn" onclick="takeScreenshot()">📸 Share Screenshot</button>
+</div>
+</div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+<!-- html2canvas for Screenshot -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+// 🔥 Replace with your Firebase config
+const firebaseConfig = {
+apiKey: "YOUR_API_KEY",
+authDomain: "YOUR_PROJECT.firebaseapp.com",
+projectId: "YOUR_PROJECT",
+storageBucket: "YOUR_PROJECT.appspot.com",
+messagingSenderId: "YOUR_SENDER_ID",
+appId: "YOUR_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Sign Up
+function signup() {
+const email = document.getElementById('email').value;
+const password = document.getElementById('password').value;
+auth.createUserWithEmailAndPassword(email, password)
+.then(()=>alert("Account created! Please login."))
+.catch(err=>alert(err.message));
+}
+
+// Login
+function login() {
+const email = document.getElementById('email').value;
+const password = document.getElementById('password').value;
+auth.signInWithEmailAndPassword(email, password)
+.then(user=>loadUser(user.user.uid))
+.catch(err=>alert(err.message));
+}
+
+// Load user DOB
+async function loadUser(uid) {
+const doc = await db.collection("users").doc(uid).get();
+if(doc.exists && doc.data().dob) startCountdown(new Date(doc.data().dob));
+else document.getElementById('dob-section').style.display="block";
+}
+
+// Save DOB
+async function saveDOB() {
+const dob = document.getElementById('dob').value;
+const user = auth.currentUser;
+if(!dob || !user) return;
+await db.collection("users").doc(user.uid).set({dob: dob});
+startCountdown(new Date(dob));
+}
+
+// Countdown
+function startCountdown(dob) {
+document.getElementById('dob-section').style.display="none";
+document.getElementById('countdown-section').style.display="block";
+
+const deathDate = new Date(dob);
+deathDate.setFullYear(deathDate.getFullYear()+75);
+
+setInterval(()=>{
+const now=new Date();
+const diff=deathDate-now;
+if(diff<=0){document.getElementById('countdown').innerText="🙏 Time Completed 🙏"; return;}
+const years=Math.floor(diff/(1000*60*60*24*365));
+const days=Math.floor((diff%(1000*60*60*24*365))/(1000*60*60*24));
+const hours=Math.floor((diff%(1000*60*60*24))/(1000*60*60));
+const minutes=Math.floor((diff%(1000*60*60))/(1000*60));
+const seconds=Math.floor((diff%(1000*60))/1000);
+document.getElementById('countdown').innerText=`${years}y ${days}d ${hours}h ${minutes}m ${seconds}s left`;
+},1000);
+}
+
+// WhatsApp Share
+function shareWhatsApp() {
+const text=document.getElementById('countdown').innerText;
+const url=`https://wa.me/?text=⏳ My Life Countdown: ${text}`;
+window.open(url,"_blank");
+}
+
+// Screenshot Share
+function takeScreenshot() {
+const card=document.getElementById('capture-card');
+html2canvas(card).then(canvas=>{
+const imgData=canvas.toDataURL("image/png");
+const link=document.createElement("a");
+link.href=imgData;
+link.download="life-countdown.png";
+link.click();
+alert("📸 Screenshot saved! Now share it on WhatsApp/Status.");
+});
+}
+</script>
+</body>
+</html>
